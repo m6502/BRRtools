@@ -43,7 +43,7 @@ void print_loop_info(unsigned int loopcount, pcm_t oldp1[], pcm_t oldp2[])
 		else
 		{
 			printf("Looping is unstable, ");
-			int i, j=0;
+			unsigned int i, j=0;
 			for (i=0; i<loopcount-1; ++i)
 			{
 				for (j=i+1; j<loopcount; ++j)
@@ -81,7 +81,7 @@ void generate_wave_file(FILE *outwav, unsigned int samplerate, pcm_t *buffer, si
 	hdr =
 	{
 		.chunk_ID = "RIFF",
-		.chunk_size = 32*k + 36,
+		.chunk_size = (u32)(32*k + 36),
 		.wave_str = "WAVE",
 		.sc1_id = "fmt ",
 		.sc1size = 16,				//Size of header
@@ -92,12 +92,13 @@ void generate_wave_file(FILE *outwav, unsigned int samplerate, pcm_t *buffer, si
 		.block_align = 2,			//BlockAlign
 		.bits_per_sample = 16,		//16-bit samples
 		.sc2_id = "data",
-		.sc2size = 32*k
+		.sc2size = (u32)(32*k)
 	};
 	fwrite(&hdr, 1, sizeof(hdr), outwav);	// Write header
 	fwrite(buffer, 2, 16*k, outwav); 		//write samplebuffer to file
 }
 
+/// filter in [0, 3].
 int get_brr_prediction(u8 filter, pcm_t p1, pcm_t p2)
 {
 	int p;
@@ -130,7 +131,8 @@ int get_brr_prediction(u8 filter, pcm_t p1, pcm_t p2)
 	}
 }
 
-static void decodeSample (char s, u8 shift_am, u8 filter)
+/// s in [0..15].
+static void decodeSample (int s, u8 shift_am, u8 filter)
 {
 	signed int a;
 	if(shift_am <= 0x0c)			//Valid shift count
@@ -146,7 +148,7 @@ static void decodeSample (char s, u8 shift_am, u8 filter)
 	else if(a < -0x4000) a += 0x8000;
 
 	p2 = p1;
-	p1 = a;
+	p1 = (pcm_t)a;
 }
 
 void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed by arg.
@@ -166,14 +168,14 @@ void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed b
 void apply_gauss_filter(pcm_t *buffer, size_t length)
 {
 	int prev = (372  + 1304) * buffer[0] + 372 * buffer[1];		// First sample
-	for(int i=1; i < length-1; ++i)
+	for(size_t i=1; i < length-1; ++i)
 	{
 		int k0 = 372 * (buffer[i-1] + buffer[i+1]);
 		int k = 1304 * buffer[i];
-		buffer[i-1] = prev/2048;
+		buffer[i-1] = (pcm_t)(prev/2048);
 		prev = k0 + k;
 	}
 	int last = 372 * buffer[length-2] + (1304 + 372) * buffer[length-1];
-	buffer[length-2] = prev/2048;
-	buffer[length-1] = last/2048;
+	buffer[length-2] = (pcm_t)(prev/2048);
+	buffer[length-1] = (pcm_t)(last/2048);
 }

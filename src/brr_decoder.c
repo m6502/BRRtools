@@ -26,7 +26,7 @@ static void print_instructions()
 int main(const int argc, char *const argv[])
 {
 	unsigned int looppos = 0, loopcount = 1, samplerate = 32000;
-	int size;
+	long size;
 	double min_length = 0.0;
 	bool gaussian_lowpass = false;
 
@@ -36,15 +36,15 @@ int main(const int argc, char *const argv[])
 		switch(c)
 		{
 			case 'l':
-				looppos = atoi(optarg);
+				looppos = (unsigned int)atoi(optarg);
 				break;
 
 			case 'n':
-				loopcount = atoi(optarg);
+				loopcount = (unsigned int)atoi(optarg);
 				break;
 
 			case 's':
-				samplerate = atoi(optarg);
+				samplerate = (unsigned int)atoi(optarg);
 				break;
 
 			case 'm':
@@ -76,6 +76,11 @@ int main(const int argc, char *const argv[])
 	// Get the size of the input BRR file
 	fseek(inbrr, 0L, SEEK_END);
 	size = ftell(inbrr);
+	if (size < 0 || size >= 0x80000000)
+	{
+		fprintf(stderr, "Error : Size of BRR file %s is too long.\n", inbrr_path);
+		exit(1);
+	}
 	fseek(inbrr, 0L, SEEK_SET);
 	// Size should be an integer multiple of 9
 	if(size%9 != 0)
@@ -84,8 +89,8 @@ int main(const int argc, char *const argv[])
 		exit(1);
 	}
 
-	int blockamount = size/9;
-	printf("Number of BRR blocks to decode : %d.\n", blockamount);
+	unsigned int blockamount = (unsigned int)size/9;
+	printf("Number of BRR blocks to decode : %u.\n", blockamount);
 
 	if(looppos >= blockamount)  	//Make sure the loop position is in range
 	{
@@ -94,8 +99,10 @@ int main(const int argc, char *const argv[])
 	}
 
 	//Implement the "minimum length" function
-	int min_len_samples = (int)ceil(min_length*samplerate/16.0);
-	loopcount = MAX((signed)loopcount, (min_len_samples-(signed)looppos)/(blockamount-(signed)looppos));
+	// (samplerate is unsigned, but may already have overflowed <0 earlier.)
+	unsigned int min_len_blocks =
+		(unsigned int)ceil(min_length * (double)samplerate / 16.0);
+	loopcount = MAX(loopcount, (min_len_blocks-looppos)/(blockamount-looppos));
 
 	pcm_t olds0[loopcount];
 	pcm_t olds1[loopcount];			//Tables to remember value of p1, p2 when looping
@@ -107,16 +114,16 @@ int main(const int argc, char *const argv[])
 	fseek(inbrr, 0, SEEK_SET);				//Start to read at the beginning of the file
 	pcm_t *buf_ptr = samples;
 
-	for(int i=0; i<looppos; ++i) 		//Read the start of the sample before loop point
+	for(unsigned int i=0; i<looppos; ++i) 		//Read the start of the sample before loop point
 	{
 		fread(BRR, 1, 9, inbrr);
 		decodeBRR(buf_ptr);					//Append 16 BRR samples to existing array
 		buf_ptr += 16;
 	}
-	for(int j=0; j<loopcount; ++j)
+	for(unsigned int j=0; j<loopcount; ++j)
 	{
 		fseek(inbrr, looppos*9, SEEK_SET);
-		for(int i=looppos; i<blockamount; ++i)
+		for(unsigned int i=looppos; i<blockamount; ++i)
 		{
 			fread(BRR, 1, 9, inbrr);
 			decodeBRR(buf_ptr);			//Append 16 BRR samples to existing array

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <stdbool.h>
@@ -60,11 +61,12 @@ static double sinc(const double x)
 
 #define CLAMP_16(n) ( ((signed short)(n) != (n)) ? ((signed short)(0x7fff - ((n)>>24))) : (n) )
 
+/// shiftamount in [0, 12], filter in [0, 3].
 static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_data[16], bool write, bool is_end_point)
 {
 	double d2=0.0;
-	Sample l1 = p1;
-	Sample l2 = p2;
+	pcm_t l1 = CLAMP_16(p1);
+	pcm_t l2 = CLAMP_16(p2);
 	int step = 1<<shiftamount;
 
 	int vlin, d, da, dp, c;
@@ -107,7 +109,7 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		d2 += (double)d * d;		/* update square-error */
 
 		if (write)					/* if we want output, put it in proper place */
-			(BRR+1)[i >> 1] |= (i&1) ? c : c<<4;
+			(BRR+1)[i >> 1] |= (u8)((i&1) ? c : c<<4);
 	}
 
 	if (is_end_point)
@@ -140,7 +142,7 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		p1 = l1;
 		p2 = l2;
 
-		BRR[0] = (shiftamount<<4)|(filter<<2);
+		BRR[0] = (u8)((shiftamount<<4)|((unsigned)filter<<2));
 		if(is_end_point)
 				BRR[0] |= 1;						//Set the end bit if we're on the last block
     }
@@ -150,10 +152,11 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 // Encode a ADPCM block using brute force over filters and shift amounts
 static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool is_end_point)
 {
-	int smin, kmin;
+	unsigned int smin;
+	u8 kmin;
 	double dmin = INFINITY;
-	for(int s=0; s<13; ++s)
-		for(int k=0; k<4; ++k)
+	for(unsigned int s=0; s<13; ++s)
+		for(u8 k=0; k<4; ++k)
 			if(FIRen[k])
 			{
 				double d = ADPCMMash(s, k, PCM_data, false, is_end_point);
@@ -182,52 +185,58 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 
 	printf("Resampling by effective ratio of %f...\n", ratio);
 
+	// TODO extract "samples plus loop point" struct, and add function for looped indexing
+
 	switch(type) {
 	case 'n':								//No interpolation
-		for(int i=0; i<out_length; ++i)
+		for(size_t i=0; i<out_length; ++i)
 		{
-			out[i] = samples[(int)floor(i*ratio)];
+			out[i] = samples[(int)floor((double)i*ratio)];
 		}
 		break;
 	case 'l':								//Linear interpolation
-		for(int i=0; i<out_length; ++i)
+		for(size_t i=0; i<out_length; ++i)
 		{
-			int a = (int)(i*ratio);		//Whole part of index
-			double b = i*ratio-a;		//Fractional part of index
-			if((a+1)==samples_length)
+			double a_real = (double)i * ratio;
+			size_t a = (size_t)a_real;		//Whole part of index
+			double frac = a_real - (double)a;		//Fractional part of index
+			if(a + 1 == samples_length)
 				out[i] = samples[a];	//This used only for the last sample
 			else
-				out[i] = (1-b)*samples[a]+b*samples[a+1];
+				out[i] = (Sample)((1-frac) * samples[a] + frac * samples[a+1]);
 		}
 		break;
 	case 's':								//Sine interpolation
-		for(int i=0; i<out_length; ++i)
+		for(size_t i=0; i<out_length; ++i)
 		{
-			int a = (int)(i*ratio);
-			double b = i*ratio-a;
-			double c = (1.0-cos(b*PI))/2.0;
-			if((a+1)==samples_length)
+			double a_real = (double)i * ratio;
+			size_t a = (size_t)a_real;		//Whole part of index
+			double frac = a_real - (double)a;		//Fractional part of index
+			double c = (1.0-cos(frac*PI))/2.0;
+			if(a + 1 == samples_length)
 				out[i] = samples[a];	//This used only for the last sample
-			else out[i] = (1-c)*samples[a]+c*samples[a+1];
+			else
+				out[i] = (Sample)((1-c) * samples[a] + c * samples[a+1]);
 		}
 		break;
 	case 'c':										//Cubic interpolation
-		for(int i=0; i<out_length; ++i)
+		for(size_t i=0; i<out_length; ++i)
 		{
-			int a = (int)(i*ratio);
+			double a_real = (double)i * ratio;
+			size_t a = (size_t)a_real;		//Whole part of index
 
-			short s0 = (a == 0) ? samples[0] : samples[a-1];
-			short s1 = samples[a];
-			short s2 = (a+1 >= samples_length) ? samples[samples_length-1] : samples[a+1];
-			short s3 = (a+2 >= samples_length) ? samples[samples_length-1] : samples[a+2];
+			Sample s0 = (a == 0) ? samples[0] : samples[a-1];
+			Sample s1 = samples[a];
+			Sample s2 = (a+1 >= samples_length) ? samples[samples_length-1] : samples[a+1];
+			Sample s3 = (a+2 >= samples_length) ? samples[samples_length-1] : samples[a+2];
 
 			double a0 = s3-s2-s0+s1;
 			double a1 = s0-s1-a0;
 			double a2 = s2-s0;
-			double b = i*ratio-a;
+			double b = a_real - (double)a;
 			double b2 = b*b;
 			double b3 = b2*b;
-			out[i] = b3*a0 + b2*a1 + b*a2 + s1;
+			out[i] = (Sample)(b3*a0 + b2*a1 + b*a2 + s1);
 		}
 		break;
 
@@ -242,15 +251,22 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 			// Compute FIR coefficients
 			for(int k=0; k<=FIR_ORDER; ++k)
 				fir_coefs[k] = sinc(k/ratio)/ratio;
+			// TODO window fir_coefs?
 
 			// Apply FIR filter to samples
-			for(int i=0; i<samples_length; ++i)
+			for(size_t i=0; i<samples_length; ++i)
 			{
 				double acc = samples[i] * fir_coefs[0];
-				for(int k=FIR_ORDER; k>0; --k)
+				for(size_t k=FIR_ORDER; k>0; --k)
 				{
-					acc += fir_coefs[k] * ((i+k < samples_length) ? samples[i+k] : samples[samples_length-1]);
-					acc += fir_coefs[k] * ((i-k >= 0) ? samples[i-k] : samples[0]);
+					acc += fir_coefs[k] *
+						((i+k < samples_length)
+							? samples[i+k]
+							: samples[samples_length-1]);
+					acc += fir_coefs[k] *
+						((k <= i)
+							? samples[i-k]
+							: samples[0]);
 				}
 				samples_antialiased[i] = (Sample)acc;
 			}
@@ -259,22 +275,23 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 			samples = samples_antialiased;
 		}
 		// Actual resampling using sinc interpolation
-		for(int i=0; i<out_length; ++i)
+		for(size_t i=0; i<out_length; ++i)
 		{
-			double a = i*ratio;
+			double a = (double)i * ratio;
 			double acc = 0.0;
-			for(int j=(int)a-FIR_ORDER; j<=(int)a+FIR_ORDER; ++j)
+			for(ptrdiff_t j=(ptrdiff_t)a-FIR_ORDER; j<=(ptrdiff_t)a+FIR_ORDER; ++j)
 			{
 				Sample sample;
 				if(j >=0)
-					if(j < samples_length)
+					if((size_t)j < samples_length)
 						sample = samples[j];
 					else
 						sample = samples[samples_length-1];
 				else
 					sample = samples[0];
 
-				acc += sample*sinc(a-j);
+				// TODO use windowed sinc?
+				acc += sample*sinc(a-(double)j);
 			}
 			out[i] = (Sample)acc;
 		}
@@ -295,15 +312,18 @@ static Sample *treble_boost_filter(Sample *samples, size_t length)
 	const double coefs[8] = {1.9217103952113372, -0.5994384267807413, 0.17887093788411362, -0.05159995503143885, 0.0143747873832524, -0.003860033140695586, 0.000996587786441055, -0.0002465337124750318};
 
 	Sample *out = safe_malloc(length * WIDTH);
-	for(int i=0; i<length; ++i)
+	for(size_t i=0; i<length; ++i)
 	{
+		// Apply coefs[0].
 		double acc = samples[i] * coefs[0];
-		for(int k=7; k>0; --k)
+
+		// Apply coefs[1..7] symmetrically.
+		for(size_t k=7; k>0; --k)
 		{
 			acc += coefs[k] * ((i+k < length) ? samples[i+k] : samples[length-1]);
-			acc += coefs[k] * ((i-k >= 0) ? samples[i-k] : samples[0]);
+			acc += coefs[k] * ((k <= i) ? samples[i-k] : samples[0]);
 		}
-		out[i] = acc;
+		out[i] = (Sample)acc;
 	}
 	free(samples);
 	return out;
@@ -313,7 +333,7 @@ int main(const int argc, char *const argv[])
 {
 	double ampl_adjust = 1.0;				// Adjusting amplitude
     double ratio = 1.0;						// Resampling factor (range ]0..4])
-    char loop_flag = 0;						// = 0x02 if loop flag is active
+    u8 loop_flag = 0;						// = 0x02 if loop flag is active
     unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
     bool fix_loop_en = false;				// True if fixed loop is activated
 	signed int loop_start;				// Starting point of loop
@@ -335,7 +355,7 @@ int main(const int argc, char *const argv[])
 				FIRen[1] = false;
 				FIRen[2] = false;
 				FIRen[3] = false;
-				for(int i=0; i < strlen(optarg); ++i)
+				for(size_t i=0; i < strlen(optarg); ++i)
 				{
 					switch(optarg[i])
 					{
@@ -370,7 +390,7 @@ int main(const int argc, char *const argv[])
 
 			case 's':
 				resample_type = optarg[0];
-				target_samplerate = atoi(optarg+1);
+				target_samplerate = (unsigned int)atoi(optarg+1);
 				break;
 
 			case 'l':
@@ -383,7 +403,7 @@ int main(const int argc, char *const argv[])
 				break;
 
 			case 't':
-				truncate_len = atoi(optarg);
+				truncate_len = (unsigned int)atoi(optarg);
 				break;
 
 			case 'g':
@@ -423,7 +443,7 @@ int main(const int argc, char *const argv[])
 	hdr;
 
 	// Read header
-	int err = fread(&hdr, 1, sizeof(hdr), inwav);
+	int err = (int)fread(&hdr, 1, sizeof(hdr), inwav);
 	// If they couldn't read the file (for example if it's too small)
 	if(err != sizeof(hdr))
 	{
@@ -478,7 +498,7 @@ int main(const int argc, char *const argv[])
 	sub_hdr;
 	while(true)
 	{
-		err = fread(&sub_hdr, 1, sizeof(sub_hdr), inwav);
+		err = (int)fread(&sub_hdr, 1, sizeof(sub_hdr), inwav);
 		if(err != sizeof(sub_hdr))
 		{
 			fprintf(stderr, "End of file reached without finding a \"data\" chunk.\n");
@@ -496,6 +516,13 @@ int main(const int argc, char *const argv[])
 	if(truncate_len && (truncate_len < samples_length))
 		samples_length = truncate_len;
 
+	if (loop_start >= 0 && (unsigned)loop_start >= samples_length)
+	{
+		fprintf(stderr, "Error : loop start (-l%d) >= sample length (%d)\n",
+			loop_start, samples_length);
+		exit(1);
+	}
+
 	Sample *samples = safe_malloc(WIDTH * samples_length);
 
 	// Adjust amplitude in function of amount of channels
@@ -504,9 +531,10 @@ int main(const int argc, char *const argv[])
 	{
 		signed int sample;
 		case 8 :
-			for(int i=0; i < samples_length; ++i)
+			for(unsigned int i=0; i < samples_length; ++i)
 			{
 				unsigned char in8_chns[hdr.chans];
+				// TODO check error code in case WAV file is truncated
 				fread(in8_chns, 1, hdr.chans, inwav);	// Read single sample on CHANS channels at a time
 				sample = 0;
 				for(int ch=0; ch < hdr.chans; ++ch)		// Average samples of all channels
@@ -516,7 +544,7 @@ int main(const int argc, char *const argv[])
 			break;
 
 		case 16 :
-			for(int i=0; i < samples_length; ++i)
+			for(unsigned int i=0; i < samples_length; ++i)
 			{
 				signed short in16_chns[hdr.chans];
 				fread(in16_chns, 2, hdr.chans, inwav);
@@ -542,17 +570,19 @@ int main(const int argc, char *const argv[])
 	unsigned int new_loopsize;
 
 	if (!fix_loop_en)
-		target_length = round(samples_length/ratio);
+		target_length = (unsigned int)round(samples_length/ratio);
 	else {
 		if (loop_start < 0) {
-			loop_start += samples_length;
+			loop_start += (int)samples_length;
 		}
 
-		double loopsize = (samples_length - loop_start) / ratio;
+		double loopsize = (double)(samples_length - (unsigned int)loop_start) / ratio;
 		// New loopsize is the multiple of 16 that comes after loopsize
-		new_loopsize = ceil(loopsize/16)*16;
+		new_loopsize = (unsigned int)ceil(loopsize / 16.) * 16;
 		// Adjust resampling
-		target_length = round(samples_length/ratio * new_loopsize / loopsize);
+		target_length = (unsigned int)round(
+			(double)samples_length / ratio * (double)new_loopsize / loopsize
+		);
 	}
 
 	samples = resample(samples, samples_length, target_length, resample_type);
@@ -563,10 +593,10 @@ int main(const int argc, char *const argv[])
 
 	if ((samples_length % 16) != 0)
 	{
-		int padding = 16 - (samples_length % 16);
+		unsigned int padding = 16 - (samples_length % 16);
 		printf(
 			"The Amount of PCM samples isn't a multiple of 16 !\n"
-			"The sample will be padded with %d zeroes at the beginning.\n"
+			"The sample will be padded with %u zeroes at the beginning.\n"
 		, padding);
 
 		// Increase buffer size and add zeroes at beginning
@@ -579,9 +609,8 @@ int main(const int argc, char *const argv[])
 		memmove(samples + padding, samples, WIDTH*samples_length);
 		samples_length += padding;
 
-		do
-			samples[--padding] = 0;
-		while(padding > 0);
+		while (padding--)
+			samples[padding] = 0;
 	}
 	printf("Size of file to encode : %u samples = %u BRR blocks.\n", samples_length, samples_length/16);
 
@@ -604,7 +633,7 @@ int main(const int argc, char *const argv[])
 	}
 	p1 = 0;
 	p2 = 0;
-	for (int n=0; n<samples_length; n+=16)
+	for (unsigned int n=0; n<samples_length; n+=16)
 	{
 		//Clear BRR buffer
 		memset(BRR, 0, 9);
