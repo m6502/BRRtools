@@ -1,0 +1,6 @@
+*.wav
+!encode-wrap.wav
+!decoded.wav
+
+# nondeterministic due to Valgrind prints
+*.txt

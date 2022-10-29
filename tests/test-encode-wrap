@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+BIN=$(readlink -f ../builddir)
+
+cd encode-wrap || exit
+
+valgrind "$BIN"/brr_encoder \
+    encode-wrap.wav \
+    encode-wrap.brr \
+    2>&1 | tee encode.txt
+
+valgrind "$BIN"/brr_decoder \
+    encode-wrap.brr \
+    decoded.wav \
+    2>&1 | tee decode.txt
