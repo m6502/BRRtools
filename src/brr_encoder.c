@@ -65,8 +65,8 @@ static double sinc(const double x)
 static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_data[16], bool write, bool is_end_point)
 {
 	double d2=0.0;
-	pcm_t l1 = CLAMP_16(p1);
-	pcm_t l2 = CLAMP_16(p2);
+	pcm_t l1 = p1;
+	pcm_t l2 = p2;
 	int step = 1<<shiftamount;
 
 	int vlin, d, da, dp, c;
@@ -76,7 +76,7 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		/* make linear prediction for next sample */
 		/*      vlin = (v0 * iCoef[0] + v1 * iCoef[1]) >> 8; */
 		vlin = get_brr_prediction(filter, l1, l2) >> 1;
-		d = ( PCM_data[i] >> 1 ) - vlin;		/* difference between linear prediction and current sample */
+		d = ( CLAMP_16( PCM_data[i] ) >> 1 ) - vlin;		/* difference between linear prediction and current sample */
 		da = abs( d );
 		if ( wrap_en && da > 16384 && da < 32768 )
 		{
@@ -103,7 +103,7 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		c &= 0x0f;		/* mask to 4 bits */
 
 		l2 = l1;			/* shift history */
-		l1 = (Sample) ( CLAMP_16( vlin + dp ) * 2 );
+		l1 = (pcm_t) ( CLAMP_16( vlin + dp ) * 2 );
 
 		d = PCM_data[i] - l1;
 		d2 += (double)d * d;		/* update square-error */
