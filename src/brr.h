@@ -4,6 +4,7 @@
 #define SKIP_SAFE_MALLOC
 #include "common.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 // Global variables for prediction of filter
 extern pcm_t p1, p2;
