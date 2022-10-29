@@ -61,7 +61,7 @@ static double sinc(const double x)
 
 #define CLAMP_16(n) ( ((signed short)(n) != (n)) ? ((signed short)(0x7fff - ((n)>>24))) : (n) )
 
-/// shiftamount in [0, 12], filter in [0, 3].
+/// shiftamount in [1, 12], filter in [0, 3].
 static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_data[16], bool write, bool is_end_point)
 {
 	double d2=0.0;
@@ -155,7 +155,7 @@ static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool i
 	unsigned int smin;
 	u8 kmin;
 	double dmin = INFINITY;
-	for(unsigned int s=0; s<13; ++s)
+	for(unsigned int s=1; s<13; ++s)
 		for(u8 k=0; k<4; ++k)
 			if(FIRen[k])
 			{
