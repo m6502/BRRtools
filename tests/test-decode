@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+valgrind ../builddir/brr_encoder -rb0.5 timecop/reference.wav timecop/reencode.brr
+valgrind ../builddir/brr_decoder timecop/reencode.brr timecop/reencode.wav

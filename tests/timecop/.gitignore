@@ -1,0 +1,5 @@
+*.brr
+!out0.brr
+*.wav
+!bug.wav
+!reference.wav
