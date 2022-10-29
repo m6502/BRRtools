@@ -21,12 +21,12 @@ executable('brr_decoder',
     install : true,
 )
 
-executable('spc_decoder',
-    'src/spc_decoder.c',
-    link_with : [brr_lib],
-    dependencies : [m_dep],
-    install : true,
-)
+# executable('spc_decoder',
+#     'src/spc_decoder.c',
+#     link_with : [brr_lib],
+#     dependencies : [m_dep],
+#     install : true,
+# )
 
 executable('brr_encoder',
     'src/brr_encoder.c',
