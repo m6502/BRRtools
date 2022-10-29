@@ -4,6 +4,15 @@ project('BRRtools', 'c',
 )
 
 cc = meson.get_compiler('c')
+
+if cc.get_id() == 'gcc'
+    WARNINGS = (
+        '-Wall -Wextra -Wconversion -Wsign-conversion -Wtype-limits ' +
+        '-Wno-unused-function -Wno-unused-parameter ' +
+        '-Werror=return-type').split()
+    add_global_arguments(WARNINGS, language : 'c')
+endif
+
 m_dep = cc.find_library('m', required : false)
 
 brr_lib = static_library('brr',
