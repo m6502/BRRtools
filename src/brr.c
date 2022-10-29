@@ -131,27 +131,16 @@ int get_brr_prediction(u8 filter, pcm_t p1, pcm_t p2)
 	}
 }
 
-/// s in [0..15].
-static void decodeSample (int s, u8 shift_am, u8 filter)
+static void decodeSample (int nybble, u8 shift_am, u8 filter, pcm_t *const p1, pcm_t *const p2)
 {
-	signed int a;
-	if (s >= 8)
-		s -= 16;
+	// Get prediction from history.
+	int pred = get_brr_prediction(filter, *p1, *p2);
 
-	if(shift_am <= 0x0c)			//Valid shift count
-		a = (s << shift_am) >> 1;
-	else
-		a = s >= 0 ? 0 : -2048;		//Error
+	pcm_t a = decode_nybble(nybble, pred, shift_am);
 
-	a += get_brr_prediction(filter, p1, p2);
-
-	if(a > 0x7fff) a = 0x7fff;
-	else if(a < -0x8000) a = -0x8000;
-	if(a >	0x3fff) a -= 0x8000;
-	else if(a < -0x4000) a += 0x8000;
-
-	p2 = p1;
-	p1 = (pcm_t)a;
+	*p2 = *p1;
+	*p1 = a;
+	fprintf(stderr, "%d\n", *p1);
 }
 
 void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed by arg.
@@ -161,9 +150,9 @@ void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed b
 
 	for(int i=0; i<8; ++i)  									//Loop for each byte
 	{
-		decodeSample(BRR[i+1]>>4, shift_amount, filter);		//Decode high nybble
+		decodeSample(BRR[i+1]>>4, shift_amount, filter, &p1, &p2);		//Decode high nybble
 		*(out++) = 2*p1;
-		decodeSample(BRR[i+1]&0x0f, shift_amount, filter);		//Decode low nybble
+		decodeSample(BRR[i+1]&0x0f, shift_amount, filter, &p1, &p2);		//Decode low nybble
 		*(out++) = 2*p1;
 	}
 }
