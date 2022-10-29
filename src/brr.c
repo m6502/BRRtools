@@ -135,10 +135,13 @@ int get_brr_prediction(u8 filter, pcm_t p1, pcm_t p2)
 static void decodeSample (int s, u8 shift_am, u8 filter)
 {
 	signed int a;
+	if (s >= 8)
+		s -= 16;
+
 	if(shift_am <= 0x0c)			//Valid shift count
-		a = ((s < 8 ? s : s-16) << shift_am) >> 1;
+		a = (s << shift_am) >> 1;
 	else
-		a = s < 8 ? 2048 : -2048;		//Max values
+		a = s >= 0 ? 0 : -2048;		//Error
 
 	a += get_brr_prediction(filter, p1, p2);
 
