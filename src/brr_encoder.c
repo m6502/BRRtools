@@ -336,7 +336,7 @@ int main(const int argc, char *const argv[])
     u8 loop_flag = 0;						// = 0x02 if loop flag is active
     unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
     bool fix_loop_en = false;				// True if fixed loop is activated
-	signed int loop_start;				// Starting point of loop
+	signed int loop_start = 0;				// Starting point of loop
 	unsigned int truncate_len = 0;			// Point at which input wave will be truncated (if = 0, input wave is not truncated)
 	bool treble_boost = false;
 
