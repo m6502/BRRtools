@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
 
-valgrind ../builddir/brr_encoder -rb0.5 timecop/reference.wav timecop/reencode.brr
-valgrind ../builddir/brr_decoder timecop/reencode.brr timecop/reencode.wav
+BIN=$(readlink -f ../builddir)
+
+cd timecop || exit
+
+valgrind "$BIN"/brr_encoder -rb0.5 reference.wav reencode.brr
+valgrind "$BIN"/brr_decoder reencode.brr reencode.wav

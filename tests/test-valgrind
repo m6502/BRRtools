@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+BIN=$(readlink -f ../builddir)
+
+cd timecop || exit
+
 for x in n l s c b; do
-    valgrind ../builddir/brr_encoder -r${x}0.5 timecop/reference.wav timecop/reencode.brr
+    valgrind "$BIN"/brr_encoder -r${x}0.5 reference.wav reencode.brr
 done
