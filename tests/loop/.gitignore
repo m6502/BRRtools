@@ -1,0 +1,4 @@
+*.txt
+*.wav
+!loop.wav
+*.brr
