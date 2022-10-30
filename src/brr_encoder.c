@@ -22,6 +22,7 @@ static void print_instructions()
 		"   The output will be resampled in a way so the looped part of the sample is\n"
 		"   an integer # of BRR blocks.\n"
 		"-f[0123] manually enable filters for BRR blocks (default : all enabled)\n"
+		"-F[0123] manually enable filters for loop block (default : 01 enabled)\n"
 		"-r[type][ratio] resample input stream, followed by resample ratio (> 0.0)\n"
 		"  (lower means more samples at output, better quality but increased size,\n"
 		"  higher means less smaples, worse quality but decreased size).\n"
@@ -44,6 +45,7 @@ typedef signed int Sample;		// -rb and -g causes signed shorts to overflow and w
 static u8 filter_at_loop = 0;
 static Sample p1_at_loop, p2_at_loop;
 static bool FIRen[4] = {true, true, true, true};	// Which BRR filters are enabled
+static bool loopFIRen[4] = {true, true, false, false};	// Which BRR filters are enabled
 static unsigned int FIRstats[4] = {0, 0, 0, 0};	// Statistincs on BRR filter usage
 static bool wrap_en = true;
 static char resample_type = 'l';					// Resampling type (n = nearest neighboor, l = linear, c = cubic, s = sine, b = bandlimited)
@@ -213,7 +215,7 @@ static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool i
 	double dmin = INFINITY;
 	for(unsigned int s=1; s<13; ++s)
 		for(u8 k=0; k<4; ++k)
-			if(FIRen[k])
+			if((is_loop_point ? loopFIRen : FIRen)[k])
 			{
 				double d = ADPCMMash(s, k, PCM_data, false, is_end_point);
 				if (d < dmin)
@@ -397,7 +399,7 @@ int main(const int argc, char *const argv[])
 	bool treble_boost = false;
 
 	int c;
-	while((c = getopt(argc, argv, "a:l::f:wr:s:z:r:t:g")) != -1)
+	while((c = getopt(argc, argv, "a:l::f:F:wr:s:z:r:t:g")) != -1)
 	{
 		switch(c)
 		{
@@ -407,32 +409,36 @@ int main(const int argc, char *const argv[])
 
 			// Only specified filters are enabled
 			case 'f':
-				FIRen[0] = false;
-				FIRen[1] = false;
-				FIRen[2] = false;
-				FIRen[3] = false;
-				for(size_t i=0; i < strlen(optarg); ++i)
+			case 'F': {
+				bool *arr = (c == 'F') ? loopFIRen : FIRen;
+				arr[0] = false;
+				arr[1] = false;
+				arr[2] = false;
+				arr[3] = false;
+
+				size_t n = strlen(optarg);
+				for(size_t i=0; i < n; ++i)
 				{
 					switch(optarg[i])
 					{
 						case '0' :
-							FIRen[0] = true;
+							arr[0] = true;
 							break;
 						case '1' :
-							FIRen[1] = true;
+							arr[1] = true;
 							break;
 						case '2' :
-							FIRen[2] = true;
+							arr[2] = true;
 							break;
 						case '3' :
-							FIRen[3] = true;
+							arr[3] = true;
 							break;
 						default:
 							print_instructions();
 					}
 				}
 				break;
-
+			}
 			case 'w':
 				wrap_en = false;
 				break;
