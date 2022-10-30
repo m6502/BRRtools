@@ -73,7 +73,6 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 	// Difference in 15-bit output, between adjacent nybble amplitudes.
 	const int nybble_step = 1 << (shiftamount - 1);
 
-	// See brr.h#decode_nybble for reference.
 	for(int i=0; i<16; ++i)
 	{
 		/* make linear prediction for next sample */
@@ -81,7 +80,33 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 
 		// 15-bit
 		const int smp = CLAMP_16( PCM_data[i] ) >> 1;
+		// See brr.h#decode_nybble for reference.
+		//
+		// pred + nybble * nybble_step ≈ (smp maybe ± 0x8000).
+		// nybble * nybble_step ≈ (smp maybe ± 0x8000) - pred.
+		//
+		// Pick whichever image of `smp` produces the smallest `nybble * nybble_step`,
+		// so you can pick a small `nybble_step` to minimize `nybble` quantization error
+		// without clipping `nybble`.
+
 		int delta = smp - pred;
+		int desired_dir = 0;
+		if (wrap_en) {
+			// A previous program version (6c186be6a5e0) would not wrap if |delta| >= 0x8000.
+			// smp and pred are 15-bit numbers, so delta should never exceed 0x8000
+			// unless the predictor is *over 100%* wrong.
+			// In that case, wrapping is still beneficial, so wrap regardless.
+			if (delta >= 0x4000) {
+				delta -= 0x8000;
+				desired_dir = 1;
+			} else if (delta < -0x4000) {
+				delta += 0x8000;
+				desired_dir = -1;
+			}
+			if (write && desired_dir != 0) {
+				printf("Caution : Wrapping was used.\n");
+			}
+		}
 
 		// delta ≈ (nybble << shift_am) >> 1
 		//       ≈ nybble * nybbleStep.
@@ -101,12 +126,12 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		pcm_t decoded = decode_nybble(nybble, pred, (u8)shiftamount, &dir);
 
 		// If the result overflows, increment/decrement nybble if possible.
-		if (dir > 0) {
+		if (dir > desired_dir) {
 			if (nybble - 1 >= -8) {
 				nybble--;
 				decoded = decode_nybble(nybble, pred, (u8)shiftamount, NULL);
 			}
-		} else if (dir < 0) {
+		} else if (dir < desired_dir) {
 			if (nybble + 1 <= 7) {
 				nybble++;
 				decoded = decode_nybble(nybble, pred, (u8)shiftamount, NULL);
