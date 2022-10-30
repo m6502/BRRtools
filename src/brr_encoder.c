@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -67,72 +68,86 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 	double d2=0.0;
 	pcm_t l1 = p1;
 	pcm_t l2 = p2;
-	int step = 1<<shiftamount;
+	assert(shiftamount >= 1 && shiftamount <= 12);
 
-	int vlin, d, da, dp, c;
+	// Difference in 15-bit output, between adjacent nybble amplitudes.
+	const int nybble_step = 1 << (shiftamount - 1);
 
+	// See brr.h#decode_nybble for reference.
 	for(int i=0; i<16; ++i)
 	{
 		/* make linear prediction for next sample */
-		/*      vlin = (v0 * iCoef[0] + v1 * iCoef[1]) >> 8; */
-		vlin = get_brr_prediction(filter, l1, l2) >> 1;
-		d = ( CLAMP_16( PCM_data[i] ) >> 1 ) - vlin;		/* difference between linear prediction and current sample */
-		da = abs( d );
-		if ( wrap_en && da > 16384 && da < 32768 )
+		const int pred = get_brr_prediction(filter, l1, l2);  // 15-bit
+
+		// 15-bit
+		const int smp = CLAMP_16( PCM_data[i] ) >> 1;
+		int delta = smp - pred;
+
+		// delta ≈ (nybble << shift_am) >> 1
+		//       ≈ nybble * nybbleStep.
+		// Solve for nybble.
+		const int delta_plus_8_steps = delta + nybble_step * 8 + (nybble_step >> 1);
+
+		int nybble_plus_8 = 0;
+		if (delta_plus_8_steps > 0)
 		{
-			/* Take advantage of wrapping */
-			d = d - 32768 * ( d >> 24 );
-			if(write) printf("Caution : Wrapping was used.\n");
+			nybble_plus_8 = delta_plus_8_steps / nybble_step;
+			if (nybble_plus_8 > 15)
+				nybble_plus_8 = 15;
 		}
-		dp = d + (step << 2) + (step >> 2);
-		c = 0;
-		if (dp > 0)
-		{
-			if (step > 1)
-				c = dp / ( step / 2 );
-			else
-				c = dp * 2;
-			if (c > 15)
-				c = 15;
-		}
-		c -= 8;
-		dp = ( c << shiftamount ) >> 1;		/* quantized estimate of samp - vlin */
-		/* edge case, if caller even wants to use it */
-		if ( shiftamount > 12 )
-			dp = ( dp >> 14 ) & ~0x7FF;
-		c &= 0x0f;		/* mask to 4 bits */
+		int nybble = nybble_plus_8 - 8;
+		// TODO clamp nybble if decode_nybble() would overflow.
 
 		l2 = l1;			/* shift history */
-		l1 = (pcm_t) ( CLAMP_16( vlin + dp ) * 2 );
+		l1 = decode_nybble(nybble, pred, (u8)shiftamount);
 
-		d = PCM_data[i] - l1;
-		d2 += (double)d * d;		/* update square-error */
+		nybble &= 0x0f;		/* mask to 4 bits */
+
+		delta = smp - l1;
+		d2 += (double)delta * delta;		/* update square-error */
 
 		if (write)					/* if we want output, put it in proper place */
-			(BRR+1)[i >> 1] |= (u8)((i&1) ? c : c<<4);
+		{
+			(BRR+1)[i >> 1] |= (u8)((i&1) ? nybble : nybble<<4);
+			fprintf(stderr, "%d\n", l1);
+		}
 	}
 
 	if (is_end_point)
+		/*
+		TODO pick nybble (not shiftamount) based on looping?
+		When calling ADPCMMash(write=true, is_end_point=true),
+		we have to compute optimal nybbles *before* writing to BRR.
+
+		Alternatively ADPCMMash(write=false) must save nybbles,
+		and ADPCMMash(write=true) rereads the cached nybbles.
+		This is harder to implement, and isn't much faster
+		unless we call ADPCMMash(write=false) only 1-2 times per write=true.
+		*/
 		switch(filter_at_loop)
 		{	/* Also account for history points when looping is enabled & filters used */
-			case 0:
+		case 0:
 			d2 /= 16.;
 			break;
 
 			/* Filter 1 */
-			case 1:
-			d = l1 - p1_at_loop;
+		case 1: {
+			int d = l1 - p1_at_loop;
 			d2 += (double)d * d;
 			d2 /= 17.;
 			break;
+		}
 
-			/* Filters 2 & 3 */
-			default:
-			d = l1 - p1_at_loop;
+		/* Filters 2 & 3 */
+		default: {
+			// TODO take into account get_brr_prediction() (for first looped sample)
+			// *and* p1 (for subsequent samples)?
+			int d = l1 - p1_at_loop;
 			d2 += (double)d * d;
 			d = l2 - p2_at_loop;
 			d2 += (double)d * d;
 			d2 /= 18.;
+		}
 		}
 	else
 		d2 /= 16.;
