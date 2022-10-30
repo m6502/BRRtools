@@ -102,7 +102,15 @@ int main(const int argc, char *const argv[])
 	// (samplerate is unsigned, but may already have overflowed <0 earlier.)
 	unsigned int min_len_blocks =
 		(unsigned int)ceil(min_length * (double)samplerate / 16.0);
-	loopcount = MAX(loopcount, (min_len_blocks-looppos)/(blockamount-looppos));
+
+	if (min_len_blocks >= looppos) {
+		// Minimum number of blocks to play after the loop point.
+		unsigned int min_blocks_loop = min_len_blocks - looppos;
+		unsigned int blocks_per_loop = blockamount-looppos;
+		// TODO ceildiv
+		unsigned int min_loops = min_blocks_loop / blocks_per_loop;
+		loopcount = MAX(loopcount, min_loops);
+	}
 
 	pcm_t olds0[loopcount];
 	pcm_t olds1[loopcount];			//Tables to remember value of p1, p2 when looping
