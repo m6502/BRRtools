@@ -5,5 +5,5 @@ BIN=$(readlink -f ../builddir)
 cd timecop || exit
 
 for x in n l s c b; do
-    valgrind "$BIN"/brr_encoder -r${x}0.5 reference.wav reencode.brr
+    valgrind "$BIN"/brr_encoder -r${x}0.5 reference.wav reencode-${x}.brr
 done
