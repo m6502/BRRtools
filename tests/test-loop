@@ -4,7 +4,7 @@ BIN=$(readlink -f ../builddir)
 
 cd loop || exit
 
-valgrind "$BIN"/brr_encoder -l48 -h \
+valgrind "$BIN"/brr_encoder -l48 -H \
     loop.wav \
     loop.brr
 
