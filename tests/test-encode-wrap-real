@@ -2,17 +2,18 @@
 
 # Test brr_encoder with an aliased saw wave designed to benefit from wrapping.
 
+set -e
 BIN=$(readlink -f ../builddir)
 
-cd encode-wrap-real || exit
+cd encode-wrap-real
 
 # no -w
-valgrind "$BIN"/brr_encoder \
+valgrind --error-exitcode=128 "$BIN"/brr_encoder \
     saw15.wav \
     saw15.brr \
     2>&1 | tee encode.txt
 
-valgrind "$BIN"/brr_decoder \
+valgrind --error-exitcode=128 "$BIN"/brr_decoder \
     saw15.brr \
     saw15-brrtools.wav \
     2>&1 | tee decode.txt
@@ -20,12 +21,12 @@ valgrind "$BIN"/brr_decoder \
 wine ../snesbrr.exe -d saw15.brr saw15-snesbrr.wav
 
 # -w
-valgrind "$BIN"/brr_encoder -w \
+valgrind --error-exitcode=128 "$BIN"/brr_encoder -w \
     saw15.wav \
     saw15-w.brr \
     2>&1 | tee encode-w.txt
 
-valgrind "$BIN"/brr_decoder \
+valgrind --error-exitcode=128 "$BIN"/brr_decoder \
     saw15-w.brr \
     saw15-w-brrtools.wav \
     2>&1 | tee decode-w.txt

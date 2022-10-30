@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
+set -e
 BIN=$(readlink -f ../builddir)
 
-cd timecop || exit
+cd timecop
 
 for x in n l s c b; do
-    valgrind "$BIN"/brr_encoder -r${x}0.5 reference.wav reencode-${x}.brr
+    valgrind --error-exitcode=128 "$BIN"/brr_encoder -r${x}0.5 reference.wav reencode-${x}.brr
 done

@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
+set -e
 BIN=$(readlink -f ../builddir)
 
-cd timecop || exit
+cd timecop
 
 # previously generated a wrapping .brr file
-valgrind "$BIN"/brr_encoder -g reference.wav reencode.brr
+valgrind --error-exitcode=128 "$BIN"/brr_encoder -g reference.wav reencode.brr
 
 # correctly decodes file
-valgrind "$BIN"/brr_decoder reencode.brr reencode.wav
+valgrind --error-exitcode=128 "$BIN"/brr_decoder reencode.brr reencode.wav
 # outputs identical .wav file
 wine ../snesbrr.exe -d reencode.brr reencode-ref.wav

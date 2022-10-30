@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -e
+
+pushd ../builddir
+ninja
+popd
+
+for test in test-*; do
+    "./$test"
+done

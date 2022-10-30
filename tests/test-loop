@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 
+set -e
 BIN=$(readlink -f ../builddir)
 
-cd loop || exit
+cd loop
 
-valgrind "$BIN"/brr_encoder -l48 -H \
+valgrind --error-exitcode=128 "$BIN"/brr_encoder -l48 -H \
     loop.wav \
     loop.brr
 
-valgrind "$BIN"/brr_decoder \
+valgrind --error-exitcode=128 "$BIN"/brr_decoder \
     loop.brr \
     decoded.wav
 
-valgrind "$BIN"/brr_decoder -n2 \
+valgrind --error-exitcode=128 "$BIN"/brr_decoder -n2 \
     loop.brr \
     decoded2.wav

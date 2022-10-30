@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
+set -e
 BIN=$(readlink -f ../builddir)
 
-cd loop || exit
+cd loop
 
-set -e
 for x in n l s c b; do
     valgrind --error-exitcode=128 "$BIN"/brr_encoder -l48 -r${x}0.5 loop.wav loop-${x}.brr
     valgrind --error-exitcode=128 "$BIN"/brr_decoder loop-${x}.brr loop-${x}.wav

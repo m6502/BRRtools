@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 
+set -e
 BIN=$(readlink -f ../builddir)
 
-cd encode-wrap || exit
+cd encode-wrap
 
-valgrind "$BIN"/brr_encoder \
+valgrind --error-exitcode=128 "$BIN"/brr_encoder \
     encode-wrap.wav \
     encode-wrap.brr \
     2>&1 | tee encode.txt
 
-valgrind "$BIN"/brr_decoder \
+valgrind --error-exitcode=128 "$BIN"/brr_decoder \
     encode-wrap.brr \
     decoded.wav \
     2>&1 | tee decode.txt
