@@ -96,10 +96,25 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 				nybble_plus_8 = 15;
 		}
 		int nybble = nybble_plus_8 - 8;
-		// TODO clamp nybble if decode_nybble() would overflow.
+
+		int dir;
+		pcm_t decoded = decode_nybble(nybble, pred, (u8)shiftamount, &dir);
+
+		// If the result overflows, increment/decrement nybble if possible.
+		if (dir > 0) {
+			if (nybble - 1 >= -8) {
+				nybble--;
+				decoded = decode_nybble(nybble, pred, (u8)shiftamount, NULL);
+			}
+		} else if (dir < 0) {
+			if (nybble + 1 <= 7) {
+				nybble++;
+				decoded = decode_nybble(nybble, pred, (u8)shiftamount, NULL);
+			}
+		}
 
 		l2 = l1;			/* shift history */
-		l1 = decode_nybble(nybble, pred, (u8)shiftamount);
+		l1 = decoded;
 
 		nybble &= 0x0f;		/* mask to 4 bits */
 

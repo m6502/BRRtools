@@ -136,7 +136,7 @@ static void decodeSample (int nybble, u8 shift_am, u8 filter, pcm_t *const p1, p
 	// Get prediction from history.
 	int pred = get_brr_prediction(filter, *p1, *p2);
 
-	pcm_t a = decode_nybble(nybble, pred, shift_am);
+	pcm_t a = decode_nybble(nybble, pred, shift_am, NULL);
 
 	*p2 = *p1;
 	*p1 = a;
