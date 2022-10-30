@@ -109,7 +109,8 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		if (write)					/* if we want output, put it in proper place */
 		{
 			(BRR+1)[i >> 1] |= (u8)((i&1) ? nybble : nybble<<4);
-			fprintf(stderr, "%d\n", l1);
+			if (0)
+				fprintf(stderr, "%d\n", l1);
 		}
 	}
 

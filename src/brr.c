@@ -140,7 +140,8 @@ static void decodeSample (int nybble, u8 shift_am, u8 filter, pcm_t *const p1, p
 
 	*p2 = *p1;
 	*p1 = a;
-	fprintf(stderr, "%d\n", *p1);
+	if (0)
+		fprintf(stderr, "%d\n", *p1);
 }
 
 void decodeBRR(pcm_t *out) 			//Decode a block of BRR bytes into array pointed by arg.
