@@ -1,0 +1,4 @@
+*.txt
+*.wav
+!saw15.wav
+*.brr
