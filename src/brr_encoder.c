@@ -21,6 +21,7 @@ static void print_instructions()
 		"   If a number follows the -l flag, this is the input's loop point in samples.\n"
 		"   The output will be resampled in a way so the looped part of the sample is\n"
 		"   an integer # of BRR blocks.\n"
+		"-H write AMK-compatible 2-byte loop header (byte offset relative to byte 2)\n"
 		"-f[0123] manually enable filters for BRR blocks (default : all enabled)\n"
 		"-F[0123] manually enable filters for loop block (default : 01 enabled)\n"
 		"-r[type][ratio] resample input stream, followed by resample ratio (> 0.0)\n"
@@ -392,6 +393,7 @@ int main(const int argc, char *const argv[])
 	double ampl_adjust = 1.0;				// Adjusting amplitude
     double ratio = 1.0;						// Resampling factor (range ]0..4])
     u8 loop_flag = 0;						// = 0x02 if loop flag is active
+	bool write_header = false;
     unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
     bool fix_loop_en = false;				// True if fixed loop is activated
 	signed int loop_start = 0;				// Starting point of loop
@@ -399,7 +401,7 @@ int main(const int argc, char *const argv[])
 	bool treble_boost = false;
 
 	int c;
-	while((c = getopt(argc, argv, "a:l::f:F:wr:s:z:r:t:g")) != -1)
+	while((c = getopt(argc, argv, "a:l::Hf:F:wr:s:z:r:t:g")) != -1)
 	{
 		switch(c)
 		{
@@ -462,6 +464,10 @@ int main(const int argc, char *const argv[])
 					loop_start = atoi(optarg);
 					fix_loop_en = true;
 				}
+				break;
+
+			case 'H':
+				write_header = true;
 				break;
 
 			case 't':
@@ -628,8 +634,8 @@ int main(const int argc, char *const argv[])
 		ratio = 1.0 * hdr.sample_rate / target_samplerate;
 	}
 
-	unsigned int target_length;
-	unsigned int new_loopsize;
+	unsigned int target_length;  // Initialized
+	unsigned int new_loopsize;  // Initialized if fix_loop_en, does not include initial block
 
 	if (!fix_loop_en)
 		target_length = (unsigned int)round(samples_length/ratio);
@@ -675,6 +681,11 @@ int main(const int argc, char *const argv[])
 			samples[padding] = 0;
 	}
 	printf("Size of file to encode : %u samples = %u BRR blocks.\n", samples_length, samples_length/16);
+	if (fix_loop_en) {
+		assert(samples_length >= new_loopsize);
+		loop_start = (int)(samples_length - new_loopsize);
+		assert(loop_start % 16 == 0);
+	}
 
 	FILE *outbrr = fopen(outbrr_path, "wb");
 	if(!outbrr)
@@ -687,12 +698,26 @@ int main(const int argc, char *const argv[])
 	for (int i=0; i<16; ++i)					//Initialization needed if any of the first 16 samples isn't zero
 		initial_block |= samples[i]!=0;
 
+	if (write_header) {
+		// Loop block index in output blocks (counting initial zero-pad block).
+		unsigned loop_block_out = (unsigned)loop_start / 16;
+		if (initial_block) {
+			loop_block_out++;
+		}
+
+		unsigned loop_off = loop_block_out * 9;
+		u8 header[2] = {(u8)loop_off, (u8)(loop_off >> 8)};
+		fwrite(header, 1, 2, outbrr);
+	}
+
 	if(initial_block)
 	{	//Write initial BRR block
 		const u8 initial_block[9] = {loop_flag, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 		fwrite(initial_block, 1, 9, outbrr);
 		printf("Initial BRR block added.\n");
 	}
+
+	// loop_start does not include initial block.
 	p1 = 0;
 	p2 = 0;
 	for (unsigned int n=0; n<samples_length; n+=16)
@@ -700,7 +725,7 @@ int main(const int argc, char *const argv[])
 		//Clear BRR buffer
 		memset(BRR, 0, 9);
 		//Encode BRR block, tell the encoder if we're at loop point (if loop is enabled), and if we're at end point
-		ADPCMBlockMash(samples + n, fix_loop_en && (n == (samples_length - new_loopsize)), n == samples_length - 16);
+		ADPCMBlockMash(samples + n, fix_loop_en && (n == (unsigned)loop_start), n == samples_length - 16);
 		//Set the loop flag if needed
 		BRR[0] |= loop_flag;
 		fwrite(BRR, 9, 1, outbrr);

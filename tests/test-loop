@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+BIN=$(readlink -f ../builddir)
+
+cd loop || exit
+
+valgrind "$BIN"/brr_encoder -l48 -H \
+    loop.wav \
+    loop.brr
+
+valgrind "$BIN"/brr_decoder \
+    loop.brr \
+    decoded.wav
+
+valgrind "$BIN"/brr_decoder -n2 \
+    loop.brr \
+    decoded2.wav

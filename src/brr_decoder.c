@@ -4,6 +4,7 @@
 #include <math.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <string.h>
 #include "common.h"
 #include "brr.h"
 
@@ -25,7 +26,10 @@ static void print_instructions()
 
 int main(const int argc, char *const argv[])
 {
-	unsigned int looppos = 0, loopcount = 1, samplerate = 32000;
+	unsigned int looppos = 0;  // In blocks, not samples!!!
+	unsigned int loopcount = 1;
+	unsigned int samplerate = 32000;
+	bool loop_set = false;
 	long size;
 	double min_length = 0.0;
 	bool gaussian_lowpass = false;
@@ -37,6 +41,7 @@ int main(const int argc, char *const argv[])
 		{
 			case 'l':
 				looppos = (unsigned int)atoi(optarg);
+				loop_set = true;
 				break;
 
 			case 'n':
@@ -81,13 +86,43 @@ int main(const int argc, char *const argv[])
 		fprintf(stderr, "Error : Size of BRR file %s is too long.\n", inbrr_path);
 		exit(1);
 	}
-	fseek(inbrr, 0L, SEEK_SET);
-	// Size should be an integer multiple of 9
-	if(size%9 != 0)
-	{
-		fprintf(stderr, "Error : Size of BRR file %s isn't a multiple of 9 bytes.\n", inbrr_path);
+	fseek(inbrr, 0L, SEEK_SET);				//Start to read at the beginning of the file
+
+	switch (size%9) {
+	case 0:
+		break;
+	case 2: {
+		// Unconditionally read 2-byte header from start of file.
+		u8 header[2];
+		if (fread(header, 1, 2, inbrr) < 2) {
+			fprintf(stderr, "Error : reading header from %s.\n", inbrr_path);
+			exit(1);
+		}
+		size -= 2;  // Only read and decode data past the header.
+
+		// If -l flag missing, set looppos from header.
+		if (!loop_set) {
+			unsigned loop_off = (u32)header[0] + ((u32)header[1] << 8);
+			if (loop_off % 9 != 0)
+				fprintf(stderr, "Warning : BRR file %s loop header %u is not a multiple of 9.\n",
+					inbrr_path, loop_off);
+
+			looppos = loop_off / 9;
+			loop_set = true;  // Never read, but set it for completeness.
+		}
+		break;
+	}
+	default:
+		fprintf(stderr,
+			"Error : Size of BRR file %s isn't a multiple of 9 bytes (with optional 2-byte header).\n",
+			inbrr_path);
 		exit(1);
 	}
+
+	// Read BRR data, skipping 2-byte loop header if present.
+	u8 *brr_buffer = safe_malloc((size_t)size);
+	fread(brr_buffer, 1, (size_t)size, inbrr);
+	fclose(inbrr);
 
 	unsigned int blockamount = (unsigned int)size/9;
 	printf("Number of BRR blocks to decode : %u.\n", blockamount);
@@ -102,7 +137,15 @@ int main(const int argc, char *const argv[])
 	// (samplerate is unsigned, but may already have overflowed <0 earlier.)
 	unsigned int min_len_blocks =
 		(unsigned int)ceil(min_length * (double)samplerate / 16.0);
-	loopcount = MAX(loopcount, (min_len_blocks-looppos)/(blockamount-looppos));
+
+	if (min_len_blocks >= looppos) {
+		// Minimum number of blocks to play after the loop point.
+		unsigned int min_blocks_loop = min_len_blocks - looppos;
+		unsigned int blocks_per_loop = blockamount-looppos;
+		// TODO ceildiv
+		unsigned int min_loops = min_blocks_loop / blocks_per_loop;
+		loopcount = MAX(loopcount, min_loops);
+	}
 
 	pcm_t olds0[loopcount];
 	pcm_t olds1[loopcount];			//Tables to remember value of p1, p2 when looping
@@ -111,21 +154,19 @@ int main(const int argc, char *const argv[])
 	unsigned int out_blocks = loopcount*(blockamount-looppos)+looppos;
 	pcm_t *samples = safe_malloc(out_blocks * 32);
 
-	fseek(inbrr, 0, SEEK_SET);				//Start to read at the beginning of the file
 	pcm_t *buf_ptr = samples;
 
 	for(unsigned int i=0; i<looppos; ++i) 		//Read the start of the sample before loop point
 	{
-		fread(BRR, 1, 9, inbrr);
+		memcpy(BRR, brr_buffer + i * 9, 9);
 		decodeBRR(buf_ptr);					//Append 16 BRR samples to existing array
 		buf_ptr += 16;
 	}
 	for(unsigned int j=0; j<loopcount; ++j)
 	{
-		fseek(inbrr, looppos*9, SEEK_SET);
 		for(unsigned int i=looppos; i<blockamount; ++i)
 		{
-			fread(BRR, 1, 9, inbrr);
+			memcpy(BRR, brr_buffer + i * 9, 9);
 			decodeBRR(buf_ptr);			//Append 16 BRR samples to existing array
 			if(i == looppos)
 			{							//Save the p1 and p2 values on each loop point encounter
@@ -135,10 +176,10 @@ int main(const int argc, char *const argv[])
 			buf_ptr += 16;
 		}
 	}
+	free(brr_buffer);
 
 	if(loopcount > 1) print_note_info(blockamount - looppos, samplerate);
 	print_loop_info(loopcount, olds0, olds1);
-	fclose(inbrr);
 
 	// Try to open output WAV file
 	FILE *outwav = fopen(outwav_path, "wb");
