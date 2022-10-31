@@ -4,3 +4,4 @@
 !loop-*.wav
 *.brr
 !loop-*.brr
+!header.brr

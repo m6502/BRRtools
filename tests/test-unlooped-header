@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+source setup-test-env.sh
+
+cd loop
+
+# Shorten file slightly so it's padded with zeros at the beginning.
+$VALGRIND "$BIN"/brr_encoder -H -rl1.05 \
+    loop.wav \
+    header.brr
+
+# $VALGRIND "$BIN"/brr_decoder \
+#     header.brr \
+#     header.wav
