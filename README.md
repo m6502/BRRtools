@@ -13,7 +13,7 @@ I heavily borrowed encoding algorithms from Kode54, which himself heavily borrow
 This is freeware, feel free to redistribute/improve but DON'T CLAIM IT IS YOUR OWN WORK THANK YOU.
 
 ## How to use
-Building the tools requires a C toolchain and make. Cygwin is recommended on Windows, most other operating systems should be good to go.
+Building the tools requires a C toolchain and Meson (or alternatively make). ~~Cygwin is recommended on Windows, most other operating systems should be good to go.~~
 
 BRRtools comes in 3 parts:
 
@@ -137,7 +137,10 @@ You can choose between several interoplation algorithms. I would really recommen
 If you have problem encoding your samples into BRR or that they sound somehow wrong/distorted, try to use `-a0.9` (that is, reduce the amplitude to 90% of the original). Very often, overflow problems happens when resampling a normalized sample (where the entire range is used), and reducing the amplitude slightly make it work greatly.
 
 ## Compiling BRRtools
-The makefile provided is a base to compile BRR tools on both windows systems (using mingw32) and on linux systems. Just change the executable name and flags to suit your needs.
+
+The official tested way to build BRRtools is using Meson. This is tested to work on Linux GCC/Clang, and MSYS2 UCRT64 using `mingw-w64-ucrt-x86_64-{gcc,meson}`.
+
+Alternatively, the makefile provided is a base to compile BRR tools on both windows systems (using mingw32) and on linux systems. Just change the executable name and flags to suit your needs.
 
 The source files makes some assumptions about type's bitsizes, you can change the typedefs in `common.h` if you are somehow compiling this with a system with different size than the typical 32/64 bit x86 PC.
 It's normal there is a few warnings coming there.
