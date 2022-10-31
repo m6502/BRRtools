@@ -199,14 +199,14 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		d2 /= 16.;
 
 	if (write)
-    {	/* when generating real output, we want to return these */
+	{	/* when generating real output, we want to return these */
 		p1 = l1;
 		p2 = l2;
 
 		BRR[0] = (u8)((shiftamount<<4)|((unsigned)filter<<2));
 		if(is_end_point)
 				BRR[0] |= 1;						//Set the end bit if we're on the last block
-    }
+	}
 	return d2;
 }
 
@@ -405,11 +405,11 @@ static Sample *treble_boost_filter(Sample *samples, size_t length)
 int main(const int argc, char *const argv[])
 {
 	double ampl_adjust = 1.0;				// Adjusting amplitude
-    double ratio = 1.0;						// Resampling factor (range ]0..4])
-    u8 loop_flag = 0;						// = 0x02 if loop flag is active
+	double ratio = 1.0;						// Resampling factor (range ]0..4])
+	u8 loop_flag = 0;						// = 0x02 if loop flag is active
 	bool write_header = false;
-    unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
-    bool fix_loop_en = false;				// True if fixed loop is activated
+	unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
+	bool fix_loop_en = false;				// True if fixed loop is activated
 	signed int loop_start = 0;				// Starting point of loop
 	unsigned int truncate_len = 0;			// Point at which input wave will be truncated (if = 0, input wave is not truncated)
 	bool treble_boost = false;
