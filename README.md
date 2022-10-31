@@ -1,7 +1,7 @@
 # BRRtools
 
-by Bregalad. Special thanks to Kode54.  
-Bug fixes and improvements by nyanpasu64 and Optiroc.  
+by Bregalad. Special thanks to Kode54.\
+Bug fixes and improvements by nyanpasu64 and Optiroc.
 
 BRRtools are currently the most evolved tools to convert between standard RIFF .wav format and SNES's built-in BRR sound format.
 They have many features never seen before in any other converter, and are open source.
@@ -13,7 +13,7 @@ I heavily borrowed encoding algorithms from Kode54, which himself heavily borrow
 This is freeware, feel free to redistribute/improve but DON'T CLAIM IT IS YOUR OWN WORK THANK YOU.
 
 ## How to use
-Building the tools requires a C toolchain and make. Cygwin is recommended on Windows, most other operating systems should be good to go. 
+Building the tools requires a C toolchain and make. Cygwin is recommended on Windows, most other operating systems should be good to go.
 
 BRRtools comes in 3 parts:
 
@@ -38,7 +38,7 @@ The minimum length functionality forces a looped sample to loop so that its leng
 If you specify a loop count value >1 with the `-n` or `-m` commands, brr_decoder will then tell you if the looping is stable, and if not it tries to detect when it gets stable.
 It will also try to detect which musical note the sample plays (this, of course, depends on the sampling rate).
 
-### spc_decoder
+### ~~spc_decoder~~
 spc_decoder is similar to brr_decoder, but decodes one or multiple BRR sound samples directly from a .spc file to .wav file(s)
 
 	Usage:
@@ -124,6 +124,17 @@ The makefile provided is a base to compile BRR tools on both windows systems (us
 
 The source files makes some assumptions about type's bitsizes, you can change the typedefs in `common.h` if you are somehow compiling this with a system with different size than the typical 32/64 bit x86 PC.
 It's normal there is a few warnings coming there.
+
+## Test suite
+
+nyanpasu64 has added a test suite to ensure brr_encoder's model and brr_decoder's output match the outputs of snesbrr (and presumably Furnace/SPC_DSP and ares). It currently only runs on Linux.
+
+```sh
+# Install Wine and valgrind
+meson builddir
+cd tests
+./run-tests
+```
 
 ## Plans for future updates
 * Any suggestions are welcome.
