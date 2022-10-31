@@ -20,18 +20,20 @@ BRRtools comes in 3 parts:
 ### brr_decoder
 brr_decoder decodes a .brr sound sample to a .wav file
 
-	Usage:
-	brr_decoder [options] infile.brr outfile.wav
+```
+Usage:
+brr_decoder [options] infile.brr outfile.wav
 
-	Options:
-	-n number of times to loop through the sample, default 1
-	-l loop start point (in BRR block units), default 0
-	-s output samplerate, default 32000
-	-m minimum sample length in seconds (requires looping enabled)
-	-g simulate SNES' gaussian lowpass filtering
+Options:
+-n number of times to loop through the sample, default 1
+-l loop start point (in BRR block units), default 0
+-s output samplerate, default 32000
+-m minimum sample length in seconds (requires looping enabled)
+-g simulate SNES' gaussian lowpass filtering
 
-	Example:
-	brr_decoder -n19 -l128 -s16000 some_sample.brr some_sample.wav
+Example:
+brr_decoder -n19 -l128 -s16000 some_sample.brr some_sample.wav
+```
 
 The minimum length functionality forces a looped sample to loop so that its length is at least the specified number in seconds. If both -m and -n are enabled, the longest of the two possible lengths is used.
 
@@ -41,19 +43,21 @@ It will also try to detect which musical note the sample plays (this, of course,
 ### ~~spc_decoder~~
 spc_decoder is similar to brr_decoder, but decodes one or multiple BRR sound samples directly from a .spc file to .wav file(s)
 
-	Usage:
-	spc_decoder [options] infile.spc outfile
+```
+Usage:
+spc_decoder [options] infile.spc outfile
 
-	Options:
-	-n number of times to loop through the sample(s) when applicable, default 1
-	-f first sample # to decode (default : 0)
-	-l last sample # to decode (default : same as first)
-	-s output samplerate, default 32000
-	-m minimum output length in seconds (applies only to looped samples)
-	-g simulate SNES' gaussian lowpass filtering
+Options:
+-n number of times to loop through the sample(s) when applicable, default 1
+-f first sample # to decode (default : 0)
+-l last sample # to decode (default : same as first)
+-s output samplerate, default 32000
+-m minimum output length in seconds (applies only to looped samples)
+-g simulate SNES' gaussian lowpass filtering
 
-	Example:
-	spc_decoder -f 3 -l 12 -s 22050 -m 0.8 music.spc music_sample
+Example:
+spc_decoder -f 3 -l 12 -s 22050 -m 0.8 music.spc music_sample
+```
 
 The number of the sample and the ".wav" extention are appended at the end of the file.
 In this example, the files created will be :
@@ -67,32 +71,34 @@ As with brr_decoder, info about sample's looping stability and musical note is w
 ### brr_encoder
 brr_encoder encodes a .wav file to a .brr native SNES sound sample.
 
-	Usage:
-	brr_encoder [options] infile.wav outfile.brr
+```
+Usage:
+brr_encoder [options] infile.wav outfile.brr
 
-	Options:
-	-a[ampl] adjust wave amplitude by a factor ampl (default : 1.0)
-	-l(pos) enable looping flag in the encoded BRR sample (default: disabled)
-		If a number follows the -l flag, this is the input's loop point in samples.
-	-f[0123] manually enable filters for BRR blocks (default: all enabled)
-	-r[type][ratio] resample input stream, followed by resample ratio (0.0 to 4.0)
-		Lower means more samples at output, better quality but increased size.
-		Higher means less smaples, worse quality but decreased size.
-	-s[type][rate] automatically resample to get the specified samplerate (takes priority over -r)
-	-t[N] truncate the input wave to the the first N samples (ignoring any sound data that follows)
-	-w disable wrapping (encoded sample will be compatible with old SPC players)
-	-g enable treble boost to compensate the gaussian filtering of SNES hardware
+Options:
+-a[ampl] adjust wave amplitude by a factor ampl (default : 1.0)
+-l(pos) enable looping flag in the encoded BRR sample (default: disabled)
+	If a number follows the -l flag, this is the input's loop point in samples.
+-f[0123] manually enable filters for BRR blocks (default: all enabled)
+-r[type][ratio] resample input stream, followed by resample ratio (0.0 to 4.0)
+	Lower means more samples at output, better quality but increased size.
+	Higher means less smaples, worse quality but decreased size.
+-s[type][rate] automatically resample to get the specified samplerate (takes priority over -r)
+-t[N] truncate the input wave to the the first N samples (ignoring any sound data that follows)
+-w disable wrapping (encoded sample will be compatible with old SPC players)
+-g enable treble boost to compensate the gaussian filtering of SNES hardware
 
-	Resampling interpolation types:
-	n : nearest neighboor (fastest)
-	l : linear
-	s : sine
-	c : cubic
-	b : bandlimited (best quality)
+Resampling interpolation types:
+n : nearest neighboor (fastest)
+l : linear
+s : sine
+c : cubic
+b : bandlimited (best quality)
 
-	Examples:
-	brr_encoder -l432 -a0.8 -f01 -sc32000 in_sample.wav out_sample.brr
-	brr_encoder -l -f23 -rb0.84 -t19 in_sample.wav out_sample.brr
+Examples:
+brr_encoder -l432 -a0.8 -f01 -sc32000 in_sample.wav out_sample.brr
+brr_encoder -l -f23 -rb0.84 -t19 in_sample.wav out_sample.brr
+```
 
 Only .wav files of 8-bit PCM unsigned or 16-bit PCM signed are accepted. For any other sound format, use another program to convert your files to an accepted format, or even better modify the source so your format is supported.
 
