@@ -4,12 +4,14 @@ project('BRRtools', 'c',
 )
 
 cc = meson.get_compiler('c')
+id = cc.get_id()
 
-if cc.get_id() == 'gcc'
+if id == 'gcc' or id == 'clang'
     WARNINGS = (
-        '-Wall -Wextra -Wconversion -Wsign-conversion -Wtype-limits ' +
+        '-Wconversion -Wsign-conversion -Wtype-limits ' +
         '-Wno-unused-function -Wno-unused-parameter ' +
-        '-Werror=return-type').split()
+        '-Werror=return-type -Werror=int-conversion').split()
+    # Omitted: -Wmissing-declarations and Clang-only -Wmissing-variable-declarations
     add_global_arguments(WARNINGS, language : 'c')
 endif
 
