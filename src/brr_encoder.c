@@ -28,14 +28,16 @@ static void print_instructions()
 		"  (lower means more samples at output, better quality but increased size,\n"
 		"  higher means less smaples, worse quality but decreased size).\n"
 		"-s[type][rate] automatically resample to get the specified samplerate\n"
+		"  (takes priority over -r)\n"
 		"-t[N] truncate the input wave to the the first N samples (ignoring\n"
 		"  any sound data that follows)\n"
 		"-w disable wrapping (encoded sample will be compatible with old SPC players)\n"
 		"-g enable treble boost to compensate the gaussian filtering of SNES hardware\n"
 		"\nResampling interpolation types :\n"
 		"n : nearest neighboor, l : linear, s : sine, c : cubic, b : bandlimited\n\n"
-		"Examples : brr_encoder -l432 -a0.8 -f01 -sc32000 in_sample.wav out_sample.brr\n"
-		"           brr_encoder -l -f23 -rb0.84 -t19 in_sample.wav out_sample.brr\n"
+		"Examples :\n"
+		"brr_encoder -Hg -l432 -a0.8 -f01 -F0 -sc32000 in_sample.wav out_sample.brr\n"
+		"brr_encoder -H -l -f23 -rb0.84 -t19 in_sample.wav out_sample.brr\n"
 	);
 	exit(1);
 }
