@@ -81,7 +81,7 @@ int main(const int argc, char *const argv[])
 	// Get the size of the input BRR file
 	fseek(inbrr, 0L, SEEK_END);
 	size = ftell(inbrr);
-	if (size < 0 || size >= 0x80000000)
+	if (size < 0 || size >= 0x7FFFFFFF)  // size is 32-bit on 32-bit and Win64
 	{
 		fprintf(stderr, "Error : Size of BRR file %s is too long.\n", inbrr_path);
 		exit(1);
