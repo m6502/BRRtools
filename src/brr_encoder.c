@@ -725,26 +725,28 @@ int main(const int argc, char *const argv[])
 		initial_block |= samples[i]!=0;
 
 	if (write_header) {
-		// Loop block index in output blocks (counting initial zero-pad block).
-		unsigned loop_block_out = (unsigned)loop_start / 16;
+		unsigned loop_off = 0;
+
 		/*
-		If -l is not passed, `loop_start = 0`, and `fix_loop_en` is false
-		so `loop_start` remains 0.
-		So `loop_block_out` = 0 (or 1 if we write a zero-filled block),
-		and we write 0 or 9 into the loop header.
+		If -l is not passed, `fix_loop_en` is false and we should not read `loop_start`.
 		(I wish `fix_loop_en` and `loop_start` were merged into an Option<int>,
 		but this is C and we can't have nice things.)
 
 		brr_decoder verifies the loop header is a multiple of 9,
 		on all samples with loop header (even unlooped ones).
-		Luckily brr_encoder passes this test with and without (-l = fix_loop_en).
+		Here we write a header of 0 for unlooped samples.
 		*/
+		if (fix_loop_en) {
+			// Loop block index in output blocks (counting initial zero-pad block).
+			unsigned loop_block_out = (unsigned)loop_start / 16;
 
-		if (initial_block) {
-			loop_block_out++;
+			if (initial_block) {
+				loop_block_out++;
+			}
+
+			loop_off = loop_block_out * 9;
 		}
 
-		unsigned loop_off = loop_block_out * 9;
 		u8 header[2] = {(u8)loop_off, (u8)(loop_off >> 8)};
 		fwrite(header, 1, 2, outbrr);
 	}
