@@ -567,7 +567,7 @@ int main(const int argc, char *const argv[])
 		fprintf(stderr, "Block align in input file is set incorrectly\n");
 		exit(1);
 	}
-	fseek(inwav, hdr.sc1size-0x10, SEEK_CUR);			// nSkip possible longer header
+	fseek(inwav, (long)(hdr.sc1size-0x10), SEEK_CUR);			// nSkip possible longer header
 
 	struct
 	{
@@ -584,7 +584,7 @@ int main(const int argc, char *const argv[])
 			exit(1);
 		}
 		if(strncmp(sub_hdr.name, "data", 4))			// If there is anyother non-"data" block, skip it
-			fseek(inwav, sub_hdr.size, SEEK_CUR);
+			fseek(inwav, (long)sub_hdr.size, SEEK_CUR);
 		else
 			break;
 	}
