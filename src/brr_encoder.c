@@ -330,7 +330,10 @@ static Sample *resample(SampleBuf input, size_t out_length, char type)
 			Sample *samples_antialiased = safe_malloc(WIDTH * input.length);
 
 			#define FIR_ORDER (15)
+			// TODO for very large downsampling ratio, FIR_ORDER taps of smoothing
+			// is insufficient (and more taps is slower)?
 			double fir_coefs[FIR_ORDER+1];
+
 			// Compute FIR coefficients
 			for(int k=0; k<=FIR_ORDER; ++k)
 				fir_coefs[k] = sinc(k/ratio)/ratio;

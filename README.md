@@ -122,7 +122,7 @@ The encoder allows you to resample your .wav before converting. This is useful s
 
 There is currently 2 ways to do it:
 
-* The `-r` command is here to resample the input by a specified ratio. For example if you use -rb1.5, the data is first resampled to be 1.5 times shorter. You can specify any real number between 0 and 4. The samplerate from the input WAV file is ignored when you use this.
+* The `-r` command is here to resample the input by a specified ratio. For example if you use -rb1.5, the data is first resampled to be 1.5 times shorter. You can specify any real number greater than 0 (though large factors produce aliasing even in `b` mode). The samplerate from the input WAV file is ignored when you use this.
 * The `-s` command uses the input file samplerate and automatically resamples the data so that it gets the specified output sample-rate.
 
 If `-l` is used alone, it just set the loop bit in the encoded BRR sample.
