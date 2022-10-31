@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define BRR_VERSION "3.16-pre"
+
 // Global variables for prediction of filter
 extern pcm_t p1, p2;
 // Buffer for a single BRR data block (9 bytes)

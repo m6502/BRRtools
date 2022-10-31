@@ -11,7 +11,7 @@
 static void print_instructions()
 {
 	printf(
-		"spc_decoder 3.15\n\n"
+		"spc_decoder " BRR_VERSION "\n\n"
 		"Usage : spc_decoder [options] infile.spc outfile\n"
 		"Options :\n"
 		"-n number of times to loop through the sample(s) when applicable, default 1\n"

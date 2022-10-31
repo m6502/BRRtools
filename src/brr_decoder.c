@@ -10,7 +10,7 @@
 static void print_instructions()
 {
 	printf(
-		"brr_decoder 3.15\n\n"
+		"brr_decoder " BRR_VERSION "\n\n"
 		"Usage : brr_decoder [options] infile.brr outfile.wav\n"
 		"Options :\n"
 		"-n number of times to loop through the sample, default 1\n"

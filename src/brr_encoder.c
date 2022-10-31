@@ -12,7 +12,7 @@
 static void print_instructions()
 {
 	printf(
-		"brr_encoder 3.15\n\n"
+		"brr_encoder " BRR_VERSION "\n\n"
 		"Usage : brr_encoder [options] infile.wav outfile.brr\n"
 		"Options :\n"
 		"-a[ampl] adjust wave amplitude by a factor ampl (default : 1.0)\n"
