@@ -3,7 +3,7 @@
 # Test brr_encoder with an aliased saw wave designed to benefit from wrapping.
 
 set -e
-BIN=$(readlink -f ../builddir)
+source setup-test-env.sh
 
 cd encode-wrap-real
 

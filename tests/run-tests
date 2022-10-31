@@ -6,26 +6,6 @@ pushd ../builddir
 ninja
 popd
 
-# Skip Valgrind outside of Linux, and Wine outside of Linux/Mac.
-# If you don't have Valgrind, add `export VALGRIND=`.
-# If you don't have Wine, add `export WINE=echo` to skip running snesbrr.
-unameOut="$(uname -s)"
-case "${unameOut}" in
-Linux*)
-# TODO bsd?
-    export VALGRIND='valgrind --error-exitcode=128'
-    export WINE='wine'
-    ;;
-Darwin*)
-    export VALGRIND=
-    export WINE='wine64'
-    ;;
-*)
-    export VALGRIND=
-    export WINE=
-    ;;
-esac
-
 for test in test-*; do
     "./$test"
 done

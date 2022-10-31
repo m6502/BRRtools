@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-BIN=$(readlink -f ../builddir)
+source setup-test-env.sh
 
 cd timecop
 
