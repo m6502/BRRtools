@@ -147,13 +147,14 @@ It's normal there is a few warnings coming there.
 
 ## Test suite
 
-nyanpasu64 has added a test suite to ensure brr_encoder's model and brr_decoder's output match the outputs of snesbrr (and presumably Furnace/SPC_DSP and ares). It currently only runs on Linux.
+nyanpasu64 has added a test suite to ensure brr_encoder's model and brr_decoder's output match the outputs of snesbrr (and presumably Furnace/SPC_DSP and ares). It runs on Linux with Valgrind (for extra checks) and Wine, MSYS2 natively, and macOS with Wine (untested).
 
 ```sh
 # Install Wine and valgrind
 meson builddir
 cd tests
 ./run-tests
+echo "Finished with code $?"
 ```
 
 ## Plans for future updates

@@ -5,14 +5,14 @@ BIN=$(readlink -f ../builddir)
 
 cd loop
 
-valgrind --error-exitcode=128 "$BIN"/brr_encoder -l48 -H \
+$VALGRIND "$BIN"/brr_encoder -l48 -H \
     loop.wav \
     loop.brr
 
-valgrind --error-exitcode=128 "$BIN"/brr_decoder \
+$VALGRIND "$BIN"/brr_decoder \
     loop.brr \
     decoded.wav
 
-valgrind --error-exitcode=128 "$BIN"/brr_decoder -n2 \
+$VALGRIND "$BIN"/brr_decoder -n2 \
     loop.brr \
     decoded2.wav

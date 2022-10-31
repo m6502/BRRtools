@@ -5,12 +5,12 @@ BIN=$(readlink -f ../builddir)
 
 cd encode-wrap
 
-valgrind --error-exitcode=128 "$BIN"/brr_encoder \
+$VALGRIND "$BIN"/brr_encoder \
     encode-wrap.wav \
     encode-wrap.brr \
     2>&1 | tee encode.txt
 
-valgrind --error-exitcode=128 "$BIN"/brr_decoder \
+$VALGRIND "$BIN"/brr_decoder \
     encode-wrap.brr \
     decoded.wav \
     2>&1 | tee decode.txt

@@ -8,28 +8,28 @@ BIN=$(readlink -f ../builddir)
 cd encode-wrap-real
 
 # no -w
-valgrind --error-exitcode=128 "$BIN"/brr_encoder \
+$VALGRIND "$BIN"/brr_encoder \
     saw15.wav \
     saw15.brr \
     2>&1 | tee encode.txt
 
-valgrind --error-exitcode=128 "$BIN"/brr_decoder \
+$VALGRIND "$BIN"/brr_decoder \
     saw15.brr \
     saw15-brrtools.wav \
     2>&1 | tee decode.txt
 
-wine ../snesbrr.exe -d saw15.brr saw15-snesbrr.wav
+$WINE ../snesbrr.exe -d saw15.brr saw15-snesbrr.wav
 
 # -w
-valgrind --error-exitcode=128 "$BIN"/brr_encoder -w \
+$VALGRIND "$BIN"/brr_encoder -w \
     saw15.wav \
     saw15-w.brr \
     2>&1 | tee encode-w.txt
 
-valgrind --error-exitcode=128 "$BIN"/brr_decoder \
+$VALGRIND "$BIN"/brr_decoder \
     saw15-w.brr \
     saw15-w-brrtools.wav \
     2>&1 | tee decode-w.txt
 
-wine ../snesbrr.exe -d saw15-w.brr saw15-w-snesbrr.wav
+$WINE ../snesbrr.exe -d saw15-w.brr saw15-w-snesbrr.wav
 
