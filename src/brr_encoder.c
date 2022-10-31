@@ -237,9 +237,37 @@ static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool i
 	FIRstats[kmin]++;
 }
 
-static Sample *resample(Sample *samples, size_t samples_length, size_t out_length, char type)
+typedef struct {
+	Sample *samples;
+	size_t length;
+	// If unlooped, loop == length.
+	size_t loop;
+} SampleBuf;
+
+Sample smp_index(SampleBuf const* input, ptrdiff_t i) {
+	// Clamp negative indexing.
+	if (i < 0) {
+		return input->samples[0];
+	}
+	// Handle in-bounds indexing.
+	if ((size_t)i < input->length) {
+		return input->samples[i];
+	}
+	// Clamp past-the-end indexing in unlooped samples.
+	if (input->loop >= input->length) {
+		return input->samples[input->length - 1];
+	}
+
+	// Wrap past-the-end indexing in looped samples.
+	Sample const* looped = input->samples + input->loop;
+	i -= (ptrdiff_t)input->loop;
+	i %= (ptrdiff_t)(input->length - input->loop);
+	return looped[i];
+}
+
+static Sample *resample(SampleBuf input, size_t out_length, char type)
 {
-	double ratio = (double)samples_length / (double)out_length;
+	double ratio = (double)input.length / (double)out_length;
 	Sample *out = safe_malloc(WIDTH * out_length);
 
 	printf("Resampling by effective ratio of %f...\n", ratio);
@@ -250,44 +278,38 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 	case 'n':								//No interpolation
 		for(size_t i=0; i<out_length; ++i)
 		{
-			out[i] = samples[(int)floor((double)i*ratio)];
+			out[i] = input.samples[(int)floor((double)i*ratio)];
 		}
 		break;
 	case 'l':								//Linear interpolation
 		for(size_t i=0; i<out_length; ++i)
 		{
 			double a_real = (double)i * ratio;
-			size_t a = (size_t)a_real;		//Whole part of index
+			ptrdiff_t a = (ptrdiff_t)a_real;		//Whole part of index
 			double frac = a_real - (double)a;		//Fractional part of index
-			if(a + 1 == samples_length)
-				out[i] = samples[a];	//This used only for the last sample
-			else
-				out[i] = (Sample)((1-frac) * samples[a] + frac * samples[a+1]);
+			out[i] = (Sample)((1-frac) * smp_index(&input, a) + frac * smp_index(&input, a+1));
 		}
 		break;
 	case 's':								//Sine interpolation
 		for(size_t i=0; i<out_length; ++i)
 		{
 			double a_real = (double)i * ratio;
-			size_t a = (size_t)a_real;		//Whole part of index
+			ptrdiff_t a = (ptrdiff_t)a_real;		//Whole part of index
 			double frac = a_real - (double)a;		//Fractional part of index
 			double c = (1.0-cos(frac*PI))/2.0;
-			if(a + 1 == samples_length)
-				out[i] = samples[a];	//This used only for the last sample
-			else
-				out[i] = (Sample)((1-c) * samples[a] + c * samples[a+1]);
+			out[i] = (Sample)((1-c) * smp_index(&input, a) + c * smp_index(&input, a+1));
 		}
 		break;
 	case 'c':										//Cubic interpolation
 		for(size_t i=0; i<out_length; ++i)
 		{
 			double a_real = (double)i * ratio;
-			size_t a = (size_t)a_real;		//Whole part of index
+			ptrdiff_t a = (ptrdiff_t)a_real;		//Whole part of index
 
-			Sample s0 = (a == 0) ? samples[0] : samples[a-1];
-			Sample s1 = samples[a];
-			Sample s2 = (a+1 >= samples_length) ? samples[samples_length-1] : samples[a+1];
-			Sample s3 = (a+2 >= samples_length) ? samples[samples_length-1] : samples[a+2];
+			Sample s0 = smp_index(&input, a-1);
+			Sample s1 = smp_index(&input, a);
+			Sample s2 = smp_index(&input, a+1);
+			Sample s3 = smp_index(&input, a+2);
 
 			double a0 = s3-s2-s0+s1;
 			double a1 = s0-s1-a0;
@@ -303,7 +325,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 		// Antialisaing pre-filtering
 		if(ratio > 1.0)
 		{
-			Sample *samples_antialiased = safe_malloc(WIDTH * samples_length);
+			Sample *samples_antialiased = safe_malloc(WIDTH * input.length);
 
 			#define FIR_ORDER (15)
 			double fir_coefs[FIR_ORDER+1];
@@ -313,25 +335,19 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 			// TODO window fir_coefs?
 
 			// Apply FIR filter to samples
-			for(size_t i=0; i<samples_length; ++i)
+			for(ptrdiff_t i=0; (size_t)i<input.length; ++i)
 			{
-				double acc = samples[i] * fir_coefs[0];
-				for(size_t k=FIR_ORDER; k>0; --k)
+				double acc = input.samples[i] * fir_coefs[0];
+				for(ptrdiff_t k=FIR_ORDER; k>0; --k)
 				{
-					acc += fir_coefs[k] *
-						((i+k < samples_length)
-							? samples[i+k]
-							: samples[samples_length-1]);
-					acc += fir_coefs[k] *
-						((k <= i)
-							? samples[i-k]
-							: samples[0]);
+					acc += fir_coefs[k] * smp_index(&input, i+k);
+					acc += fir_coefs[k] * smp_index(&input, i-k);
 				}
 				samples_antialiased[i] = (Sample)acc;
 			}
 
-			free(samples);
-			samples = samples_antialiased;
+			free(input.samples);
+			input.samples = samples_antialiased;
 		}
 		// Actual resampling using sinc interpolation
 		for(size_t i=0; i<out_length; ++i)
@@ -340,14 +356,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 			double acc = 0.0;
 			for(ptrdiff_t j=(ptrdiff_t)a-FIR_ORDER; j<=(ptrdiff_t)a+FIR_ORDER; ++j)
 			{
-				Sample sample;
-				if(j >=0)
-					if((size_t)j < samples_length)
-						sample = samples[j];
-					else
-						sample = samples[samples_length-1];
-				else
-					sample = samples[0];
+				Sample sample = smp_index(&input, j);
 
 				// TODO use windowed sinc?
 				acc += sample*sinc(a-(double)j);
@@ -361,7 +370,7 @@ static Sample *resample(Sample *samples, size_t samples_length, size_t out_lengt
 		print_instructions();
 	}
 	// No longer need the non-resampled version of the sample
-	free(samples);
+	free(input.samples);
 	return out;
 }
 
@@ -580,6 +589,10 @@ int main(const int argc, char *const argv[])
 
 	// Output buffer
 	unsigned int samples_length = sub_hdr.size/hdr.block_align;
+	if (samples_length == 0) {
+		fprintf(stderr, "Error : input file has zero length\n");
+		exit(1);
+	}
 	// Optional truncation of input sample
 	if(truncate_len && (truncate_len < samples_length))
 		samples_length = truncate_len;
@@ -637,8 +650,9 @@ int main(const int argc, char *const argv[])
 	unsigned int target_length;  // Initialized
 	unsigned int new_loopsize;  // Initialized if fix_loop_en, does not include initial block
 
-	if (!fix_loop_en)
+	if (!fix_loop_en) {
 		target_length = (unsigned int)round(samples_length/ratio);
+	}
 	else {
 		if (loop_start < 0) {
 			loop_start += (int)samples_length;
@@ -653,7 +667,14 @@ int main(const int argc, char *const argv[])
 		);
 	}
 
-	samples = resample(samples, samples_length, target_length, resample_type);
+	samples = resample(
+		(SampleBuf) { // Be sure to pass input samples, input length, and input loop!
+			.samples = samples,
+			.length = samples_length,
+			.loop = fix_loop_en ? (size_t)loop_start : samples_length,
+		},
+		target_length,
+		resample_type);
 	samples_length = target_length;
 
 	// Apply trebble boost filter (gussian lowpass compensation) if requested by user

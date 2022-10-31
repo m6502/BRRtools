@@ -1,5 +1,6 @@
 *.brr
 !out0.brr
+!reencode-*.brr
 *.wav
 !bug.wav
 !reference.wav
