@@ -241,6 +241,7 @@ static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool i
 
 typedef struct {
 	Sample *samples;
+	u32 rate;
 	size_t length;
 	// If unlooped, loop == length.
 	size_t loop;
@@ -272,7 +273,9 @@ static Sample *resample(SampleBuf input, size_t out_length, char type)
 	double ratio = (double)input.length / (double)out_length;
 	Sample *out = safe_malloc(WIDTH * out_length);
 
-	printf("Resampling by effective ratio of %f...\n", ratio);
+	// TODO return SampleBuf holding new sampling rate?
+	double new_rate = (double)input.rate / ratio;
+	printf("Resampling by effective ratio of %f to %f Hz...\n", ratio, new_rate);
 
 	// TODO extract "samples plus loop point" struct, and add function for looped indexing
 
@@ -675,6 +678,7 @@ int main(const int argc, char *const argv[])
 	samples = resample(
 		(SampleBuf) { // Be sure to pass input samples, input length, and input loop!
 			.samples = samples,
+			.rate = hdr.sample_rate,
 			.length = samples_length,
 			.loop = fix_loop_en ? (size_t)loop_start : samples_length,
 		},
