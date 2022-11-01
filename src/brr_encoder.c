@@ -213,8 +213,8 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 // Encode a ADPCM block using brute force over filters and shift amounts
 static void ADPCMBlockMash(const Sample PCM_data[16], bool is_loop_point, bool is_end_point)
 {
-	unsigned int smin;
-	u8 kmin;
+	unsigned int smin = 1;
+	u8 kmin = 0;
 	double dmin = INFINITY;
 	for(unsigned int s=1; s<13; ++s)
 		for(u8 k=0; k<4; ++k)
@@ -653,7 +653,7 @@ int main(const int argc, char *const argv[])
 	}
 
 	unsigned int target_length;  // Initialized
-	unsigned int new_loopsize;  // Initialized if fix_loop_en, does not include initial block
+	unsigned int new_loopsize = 0;  // Only read if fix_loop_en, does not include initial block
 
 	if (!fix_loop_en) {
 		target_length = (unsigned int)round(samples_length/ratio);
