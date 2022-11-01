@@ -38,16 +38,16 @@ static inline pcm_t decode_nybble(int nybble, int pred, u8 shift_am, int *maybe_
 	if(a > 0x7fff) a = 0x7fff;
 	else if(a < -0x8000) a = -0x8000;
 
-    if(a > 0x3fff) {
-        a -= 0x8000;
-        if (maybe_dir) *maybe_dir = 1;
-    } else if(a < -0x4000) {
-        a += 0x8000;
-        if (maybe_dir) *maybe_dir = -1;
-    } else {
-        if (maybe_dir) *maybe_dir = 0;
-    }
-    return (pcm_t)a;
+	if(a > 0x3fff) {
+		a -= 0x8000;
+		if (maybe_dir) *maybe_dir = 1;
+	} else if(a < -0x4000) {
+		a += 0x8000;
+		if (maybe_dir) *maybe_dir = -1;
+	} else {
+		if (maybe_dir) *maybe_dir = 0;
+	}
+	return (pcm_t)a;
 }
 
 void decodeBRR(pcm_t *out);

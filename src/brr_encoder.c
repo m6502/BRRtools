@@ -199,14 +199,14 @@ static double ADPCMMash(unsigned int shiftamount, u8 filter, const Sample PCM_da
 		d2 /= 16.;
 
 	if (write)
-    {	/* when generating real output, we want to return these */
+	{	/* when generating real output, we want to return these */
 		p1 = l1;
 		p2 = l2;
 
 		BRR[0] = (u8)((shiftamount<<4)|((unsigned)filter<<2));
 		if(is_end_point)
 				BRR[0] |= 1;						//Set the end bit if we're on the last block
-    }
+	}
 	return d2;
 }
 
@@ -405,11 +405,11 @@ static Sample *treble_boost_filter(Sample *samples, size_t length)
 int main(const int argc, char *const argv[])
 {
 	double ampl_adjust = 1.0;				// Adjusting amplitude
-    double ratio = 1.0;						// Resampling factor (range ]0..4])
-    u8 loop_flag = 0;						// = 0x02 if loop flag is active
+	double ratio = 1.0;						// Resampling factor (range ]0..4])
+	u8 loop_flag = 0;						// = 0x02 if loop flag is active
 	bool write_header = false;
-    unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
-    bool fix_loop_en = false;				// True if fixed loop is activated
+	unsigned int target_samplerate = 0;		// Output sample rate (0 = don't change)
+	bool fix_loop_en = false;				// True if fixed loop is activated
 	signed int loop_start = 0;				// Starting point of loop
 	unsigned int truncate_len = 0;			// Point at which input wave will be truncated (if = 0, input wave is not truncated)
 	bool treble_boost = false;
@@ -725,13 +725,28 @@ int main(const int argc, char *const argv[])
 		initial_block |= samples[i]!=0;
 
 	if (write_header) {
-		// Loop block index in output blocks (counting initial zero-pad block).
-		unsigned loop_block_out = (unsigned)loop_start / 16;
-		if (initial_block) {
-			loop_block_out++;
+		unsigned loop_off = 0;
+
+		/*
+		If -l is not passed, `fix_loop_en` is false and we should not read `loop_start`.
+		(I wish `fix_loop_en` and `loop_start` were merged into an Option<int>,
+		but this is C and we can't have nice things.)
+
+		brr_decoder verifies the loop header is a multiple of 9,
+		on all samples with loop header (even unlooped ones).
+		Here we write a header of 0 for unlooped samples.
+		*/
+		if (fix_loop_en) {
+			// Loop block index in output blocks (counting initial zero-pad block).
+			unsigned loop_block_out = (unsigned)loop_start / 16;
+
+			if (initial_block) {
+				loop_block_out++;
+			}
+
+			loop_off = loop_block_out * 9;
 		}
 
-		unsigned loop_off = loop_block_out * 9;
 		u8 header[2] = {(u8)loop_off, (u8)(loop_off >> 8)};
 		fwrite(header, 1, 2, outbrr);
 	}
