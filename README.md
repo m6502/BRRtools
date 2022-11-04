@@ -114,7 +114,7 @@ Multi-channel input (stereo, surround or whatever) will automatically be convert
 
 You can select which filters are enabled or disabled. For example if you only want to use filter 1 and 2, you can do that by passing option `-f12`.
 
-To fix unstable and overflowing looped samples, you can pass `-F0` to encode the first looped block using only filter 0 (which does not extrapolate from previous samples), so every loop is guaranteed to play an identical sound. By default `brr_encoder` only enables `-F01`, since filter 1 (relative to previous point with decay) is usually higher-quality than filter 0 (raw 4-bit PCM) but has less loop discrepancies than 2 or 3 (extrapolating from previous point and slope with decay). This should be good enough in most cases, but try `-F0` or reducing amplification (`-a0.9`) if you get overflows after looping.
+If the source sample is looped poorly and the level just before the loop point doesn't match the end of the sample, the encoded sample may play incorrectly after looping (causing an audible pop every loop). You can either copy 1-16 samples from after the loop point to the end of the sample (and increase the `-l(pos)` argument by the same amount), or pass `-F0` to encode the first looped block using only filter 0 (which does not extrapolate from previous samples), so every loop is guaranteed to play an identical sound. By default `brr_encoder` enables `-F01`, since filter 1 (relative to previous point with decay) is usually higher-quality than filter 0 (raw 4-bit PCM) but has less loop discrepancies than 2 or 3 (extrapolating from previous point and slope with decay). If you get sample overflow after looping, try `-F0` or reducing amplification (`-a0.9`).
 
 If the first 16 samples aren't already all zeros, the encoder will add a zero block, which is necessary to initialise the decoder's history when decoding the sample.
 
@@ -134,7 +134,10 @@ It is safe to use `-s` or `-r` in combination with `-l`, just keep in mind the r
 You can choose between several interoplation algorithms. I would really recommend to use bandlimited as it is the only algorithm to to guarantee no aliasing in case of resampling by ratio greater than 1.0 (when shortening/worsening the quality of sample) which is often needed to make the samples fit in SPC700's small 64K memory space!
 
 ## Troubleshooting
+
 If you have problem encoding your samples into BRR or that they sound somehow wrong/distorted, try to use `-a0.9` (that is, reduce the amplitude to 90% of the original). Very often, overflow problems happens when resampling a normalized sample (where the entire range is used), and reducing the amplitude slightly make it work greatly.
+
+If you are using Gaussian preemphasis (`-g`), amplifying by 0.9 is generally enough for average instruments, but you may need more attenuation for treble-heavy instruments such as cymbals (up to even `-a0.4` or less in extreme cases).
 
 ## Compiling BRRtools
 
