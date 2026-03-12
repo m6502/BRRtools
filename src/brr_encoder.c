@@ -542,9 +542,9 @@ int main(const int argc, char *const argv[])
 		fprintf(stderr, "Error : Input file in unsupported format : \"RIFF\" block missing.\n");
 		exit(1);
 	}
-	// "WAVEfmt" letters
-	if(strncmp(hdr.wave_sc1, "WAVEfmt ", 8))
-	{
+	// "WAVEfmt " letters
+	if(strncmp(hdr.wave_str, "WAVE", 4) || 
+	   strncmp(hdr.sc1_id, "fmt ", 4))	{
 		fprintf(stderr, "Input file in unsupported format : \"WAVEfmt\" block missing !\n");
 		exit(1);
 	}
